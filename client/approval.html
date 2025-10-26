@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>流程审批</title>
+  <link rel="icon" href="favicon.ico">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      background: white;
+      border: 2px solid #ecf0f1;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    .tab-btn.active {
+      background: #e74c3c;
+      color: white;
+      border-color: #e74c3c;
+    }
+    .tab-btn:hover {
+      border-color: #e74c3c;
+    }
+    .approval-list {
+      display: grid;
+      gap: 15px;
+    }
+    .approval-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #f39c12;
+      transition: all 0.3s;
+    }
+    .approval-card.approved {
+      border-left-color: #27ae60;
+      opacity: 0.8;
+    }
+    .approval-card.rejected {
+      border-left-color: #e74c3c;
+    }
+    .approval-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 10px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .card-status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-pending { background: #fff3e0; color: #e65100; }
+    .status-approved { background: #e6ffe6; color: #2e7d32; }
+    .status-rejected { background: #ffe6e6; color: #c62828; }
+    .card-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .info-item {
+      padding: 10px 0;
+    }
+    .info-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-bottom: 4px;
+    }
+    .info-value {
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .approval-flow {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .flow-step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .flow-step:last-child {
+      margin-bottom: 0;
+    }
+    .step-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    .step-pending { background: #ecf0f1; color: #7f8c8d; }
+    .step-approved { background: #e6ffe6; color: #2e7d32; }
+    .step-rejected { background: #ffe6e6; color: #c62828; }
+    .step-info {
+      flex: 1;
+    }
+    .step-name {
+      font-weight: bold;
+      color: #2c3e50;
+      font-size: 13px;
+    }
+    .step-detail {
+      font-size: 12px;
+      color: #7f8c8d;
+    }
+    .card-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    .btn-approve {
+      background: #27ae60;
+      color: white;
+      flex: 1;
+    }
+    .btn-approve:hover { background: #229954; }
+    .btn-reject {
+      background: #e74c3c;
+      color: white;
+      flex: 1;
+    }
+    .btn-reject:hover { background: #c0392b; }
+    .btn-view {
+      background: #3498db;
+      color: white;
+      flex: 1;
+    }
+    .btn-view:hover { background: #2980b9; }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      min-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .modal-content h2 { margin-bottom: 20px; color: #2c3e50; }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .form-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ecf0f1;
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 80px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-buttons button {
+      flex: 1;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✔️ 流程审批</h1>
+      <p style="margin-top: 10px; color: #7f8c8d;">管理模具生产流程的各阶段审批</p>
+    </div>
+
+    <!-- 标签页 -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('pending')">待审批 (3)</button>
+      <button class="tab-btn" onclick="switchTab('approved')">已通过 (12)</button>
+      <button class="tab-btn" onclick="switchTab('rejected')">已拒绝 (2)</button>
+      <button class="tab-btn" onclick="switchTab('all')">全部 (17)</button>
+    </div>
+
+    <!-- 待审批 -->
+    <div id="pending" class="approval-list" style="display: block;">
+      <div class="approval-card">
+        <div class="card-header">
+          <div class="card-title">模具 SC25-01 - 工程部审批</div>
+          <span class="card-status status-pending">⏳ 待审批</span>
+        </div>
+        
+        <div class="card-info">
+          <div class="info-item">
+            <div class="info-label">提交人</div>
+            <div class="info-value">张三（计划部）</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">提交时间</div>
+            <div class="info-value">2025-10-26 10:30</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">审批阶段</div>
+            <div class="info-value">工程部设计审核</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">优先级</div>
+            <div class="info-value" style="color: #e74c3c;">🔴 高（客户急件）</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">待审批时长</div>
+            <div class="info-value" style="color: #e74c3c;">⏱️ 3小时</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">模具类型</div>
+            <div class="info-value">精密塑胶模</div>
+          </div>
+        </div>
+
+        <div style="background: #fff9e6; padding: 12px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #f39c12;">
+          <p style="font-size: 13px; margin: 0;"><strong>模具信息：</strong>客户：ABC塑胶厂 | 产品：手机壳 | 估计工期：25天 | 预计费用：¥45,000</p>
+        </div>
+
+        <div class="approval-flow">
+          <div class="flow-step">
+            <div class="step-icon step-approved">✓</div>
+            <div class="step-info">
+              <div class="step-name">📋 计划部 - 计划审核</div>
+              <div class="step-detail">李四 审批于 2025-10-25 14:20 | 意见：计划可行</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-icon step-pending">→</div>
+            <div class="step-info">
+              <div class="step-name">🔧 工程部 - 设计审核（当前）</div>
+              <div class="step-detail">王五 待审批（已提醒3次）</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-icon step-pending">→</div>
+            <div class="step-info">
+              <div class="step-name">✔️ 质检部 - 质量审核</div>
+              <div class="step-detail">刘经理 待进行</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-icon step-pending">→</div>
+            <div class="step-info">
+              <div class="step-name">💰 财务部 - 价格审核</div>
+              <div class="step-detail">张会计 待进行</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 15px; border-left: 3px solid #3498db;">
+          <p style="font-size: 12px; color: #7f8c8d; margin: 0;"><strong>📌 前置审批意见：</strong></p>
+          <p style="font-size: 12px; color: #2c3e50; margin: 5px 0 0 0;">✓ 计划部：计划合理，可按时交付</p>
+        </div>
+
+        <div style="background: #fef5f5; padding: 12px; border-radius: 4px; margin-bottom: 15px; border-left: 3px solid #e74c3c;">
+          <p style="font-size: 12px; margin: 0;"><strong>⚠️ 需检查项：</strong></p>
+          <ul style="font-size: 12px; margin: 5px 0 0 15px; padding: 0;">
+            <li>CAD图纸是否符合工艺要求</li>
+            <li>冷却系统设计是否合理</li>
+            <li>脱模设计是否可行</li>
+            <li>精度要求是否满足</li>
+          </ul>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-approve" onclick="openApprovalModal('approve', 'SC25-01')">✓ 通过审批</button>
+          <button class="btn btn-reject" onclick="openApprovalModal('reject', 'SC25-01')">✗ 拒绝审批</button>
+          <button class="btn btn-view" onclick="showDocuments('SC25-01')">📄 查看附件</button>
+        </div>
+      </div>
+
+      <div class="approval-card">
+        <div class="card-header">
+          <div class="card-title">模具 SC25-02 - 采购部审批</div>
+          <span class="card-status status-pending">⏳ 待审批</span>
+        </div>
+        
+        <div class="card-info">
+          <div class="info-item">
+            <div class="info-label">提交人</div>
+            <div class="info-value">赵六（工程部）</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">提交时间</div>
+            <div class="info-value">2025-10-26 11:15</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">审批阶段</div>
+            <div class="info-value">采购物料审核</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">优先级</div>
+            <div class="info-value" style="color: #f39c12;">🟡 普通</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">物料预算</div>
+            <div class="info-value">¥18,500</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">待审批时长</div>
+            <div class="info-value">1小时</div>
+          </div>
+        </div>
+
+        <div style="background: #f0f5ff; padding: 12px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #3498db;">
+          <p style="font-size: 13px; margin: 0;"><strong>📋 物料清单摘要：</strong></p>
+          <p style="font-size: 12px; margin: 5px 0 0 0;">钢料：¥8,000 | 铜料：¥6,500 | 配件：¥3,200 | 辅料：¥800</p>
+        </div>
+
+        <div class="approval-flow">
+          <div class="flow-step">
+            <div class="step-icon step-approved">✓</div>
+            <div class="step-info">
+              <div class="step-name">📋 计划部 - 计划审核</div>
+              <div class="step-detail">李四 审批于 2025-10-25 14:20</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-icon step-approved">✓</div>
+            <div class="step-info">
+              <div class="step-name">🔧 工程部 - 设计审核</div>
+              <div class="step-detail">王五 审批于 2025-10-26 09:45</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-icon step-pending">→</div>
+            <div class="step-info">
+              <div class="step-name">🛒 采购部 - 物料审核（当前）</div>
+              <div class="step-detail">采购经理 待审批</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-approve" onclick="openApprovalModal('approve', 'SC25-02')">✓ 通过</button>
+          <button class="btn btn-reject" onclick="openApprovalModal('reject', 'SC25-02')">✗ 拒绝</button>
+          <button class="btn btn-view" onclick="showDocuments('SC25-02')">📦 查看物料单</button>
+        </div>
+      </div>
+
+      <div class="approval-card">
+        <div class="card-header">
+          <div class="card-title">模具 SC25-03 - 质检部审批</div>
+          <span class="card-status status-pending">⏳ 待审批</span>
+        </div>
+        
+        <div class="card-info">
+          <div class="info-item">
+            <div class="info-label">提交人</div>
+            <div class="info-value">孙七（工程部）</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">提交时间</div>
+            <div class="info-value">2025-10-26 13:45</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">审批阶段</div>
+            <div class="info-value">产品质检规范</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">优先级</div>
+            <div class="info-value" style="color: #f39c12;">🟡 普通</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">质检要求</div>
+            <div class="info-value">精度：±0.05mm</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">待审批时长</div>
+            <div class="info-value">30分钟</div>
+          </div>
+        </div>
+
+        <div style="background: #f5f9ff; padding: 12px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #3498db;">
+          <p style="font-size: 13px; margin: 0;"><strong>🔍 质检要点：</strong></p>
+          <p style="font-size: 12px; margin: 5px 0 0 0;">外观检查 | 尺寸精度 | 脱模测试 | 耐久性测试 | 成本优化</p>
+        </div>
+
+        <div class="approval-flow">
+          <div class="flow-step">
+            <div class="step-icon step-approved">✓</div>
+            <div class="step-info">
+              <div class="step-name">📋 计划部 - 计划审核</div>
+              <div class="step-detail">李四 审批于 2025-10-25 14:20</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-icon step-approved">✓</div>
+            <div class="step-info">
+              <div class="step-name">🔧 工程部 - 设计审核</div>
+              <div class="step-detail">王五 审批于 2025-10-26 09:45</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-icon step-pending">→</div>
+            <div class="step-info">
+              <div class="step-name">✔️ 质检部 - 质量审核（当前）</div>
+              <div class="step-detail">质检部长 待审批</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-approve" onclick="openApprovalModal('approve', 'SC25-03')">✓ 通过</button>
+          <button class="btn btn-reject" onclick="openApprovalModal('reject', 'SC25-03')">✗ 拒绝</button>
+          <button class="btn btn-view" onclick="showDocuments('SC25-03')">🔍 查看检验规范</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已通过 -->
+    <div id="approved" class="approval-list" style="display: none;">
+      <div class="approval-card approved">
+        <div class="card-header">
+          <div class="card-title">模具 SC24-01 - 工程部审批</div>
+          <span class="card-status status-approved">✓ 已通过</span>
+        </div>
+        <div class="card-info">
+          <div class="info-item">
+            <div class="info-label">审批人</div>
+            <div class="info-value">王五</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">审批时间</div>
+            <div class="info-value">2025-10-25 16:30</div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-view" style="flex: 1;">📄 查看详情</button>
+        </div>
+      </div>
+
+      <div class="approval-card approved">
+        <div class="card-header">
+          <div class="card-title">模具 SC24-02 - 质检部审批</div>
+          <span class="card-status status-approved">✓ 已通过</span>
+        </div>
+        <div class="card-info">
+          <div class="info-item">
+            <div class="info-label">审批人</div>
+            <div class="info-value">刘八</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">审批时间</div>
+            <div class="info-value">2025-10-24 09:20</div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-view" style="flex: 1;">📄 查看详情</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已拒绝 -->
+    <div id="rejected" class="approval-list" style="display: none;">
+      <div class="approval-card rejected">
+        <div class="card-header">
+          <div class="card-title">模具 SC24-05 - 工程部审批</div>
+          <span class="card-status status-rejected">✗ 已拒绝</span>
+        </div>
+        <div class="card-info">
+          <div class="info-item">
+            <div class="info-label">拒绝人</div>
+            <div class="info-value">王五</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">拒绝时间</div>
+            <div class="info-value">2025-10-20 14:15</div>
+          </div>
+        </div>
+        <div style="background: #ffe6e6; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+          <p style="font-size: 12px; color: #c62828;"><strong>拒绝原因：</strong>图纸尺寸与要求不符，请重新调整</p>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-view" style="flex: 1;">📄 查看详情</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 全部 -->
+    <div id="all" class="approval-list" style="display: none;">
+      <p style="text-align: center; color: #7f8c8d;">共 17 项审批记录</p>
+    </div>
+  </div>
+
+  <!-- 审批模态框 -->
+  <div id="approvalModal" class="modal">
+    <div class="modal-content">
+      <h2 id="modalTitle">审批</h2>
+      
+      <div style="background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 15px;">
+        <p style="font-size: 12px; color: #7f8c8d; margin: 0;"><strong>📋 审批类型：</strong><span id="approvalType" style="color: #2c3e50; margin-left: 10px;"></span></p>
+      </div>
+      
+      <div class="form-group">
+        <label>💬 审批意见 <span style="color: #e74c3c;">*</span></label>
+        <textarea id="approvalComment" placeholder="请输入详细的审批意见...（建议200字以上）" style="min-height: 100px;"></textarea>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div class="form-group">
+          <label>审批结果标签</label>
+          <select id="approvalTag">
+            <option>-- 选择标签 --</option>
+            <option value="approved">✓ 已批准</option>
+            <option value="needs_revision">⚠️ 需修改</option>
+            <option value="rejected">✗ 拒绝</option>
+            <option value="conditional">⏳ 条件通过</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>预计回复时间</label>
+          <input type="text" value="1小时内" placeholder="如：1小时内">
+        </div>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <input type="checkbox" id="notifyCheckbox" checked>
+        <label for="notifyCheckbox" style="margin-bottom: 0;">📧 发送邮件通知提交人</label>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <input type="checkbox" id="attachmentCheckbox">
+        <label for="attachmentCheckbox" style="margin-bottom: 0;">📎 上传附件（修改意见文件）</label>
+      </div>
+      
+      <div id="attachmentBox" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 15px; border: 2px dashed #ecf0f1;">
+        <input type="file" style="width: 100%;">
+      </div>
+      
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button class="btn btn-approve" onclick="submitApproval()" style="flex: 1;">确认提交审批</button>
+        <button class="btn" onclick="closeApprovalModal()" style="flex: 1; background: #95a5a6; color: white;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件查看模态框 -->
+  <div id="docModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 8px; max-width: 800px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #ecf0f1; padding-bottom: 15px;">
+        <h2 id="docTitle" style="color: #2c3e50; margin: 0;">附件查看</h2>
+        <button onclick="closeDocModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #7f8c8d;">✕</button>
+      </div>
+      
+      <div id="docContent" style="color: #2c3e50;"></div>
+      
+      <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn" onclick="alert('已下载附件')" style="background: #27ae60;">📥 下载</button>
+        <button class="btn" onclick="closeDocModal()" style="background: #95a5a6;">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tabName) {
+      document.querySelectorAll('.approval-list').forEach(l => l.style.display = 'none');
+      document.getElementById(tabName).style.display = 'block';
+      
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function openApprovalModal(type, moldId) {
+      const title = type === 'approve' ? '✓ 通过审批' : '✗ 拒绝审批';
+      const typeText = type === 'approve' ? '通过' : '拒绝';
+      document.getElementById('modalTitle').textContent = moldId + ' - ' + title;
+      document.getElementById('approvalType').textContent = typeText;
+      document.getElementById('approvalModal').classList.add('show');
+      
+      // 如果是拒绝，预填一些内容
+      if (type === 'reject') {
+        document.getElementById('approvalTag').value = 'rejected';
+      }
+    }
+
+    function closeApprovalModal() {
+      document.getElementById('approvalModal').classList.remove('show');
+      document.getElementById('approvalComment').value = '';
+    }
+
+    function submitApproval() {
+      const comment = document.getElementById('approvalComment').value;
+      const tag = document.getElementById('approvalTag').value;
+      const notify = document.getElementById('notifyCheckbox').checked;
+      
+      if (!comment.trim()) {
+        alert('⚠️ 请填写审批意见');
+        return;
+      }
+      
+      alert('✓ 审批意见已提交！\n意见：' + comment.substring(0, 30) + '...\n\n系统将自动流转到下一个审批人。');
+      closeApprovalModal();
+    }
+
+    // 附件上传切换
+    document.getElementById('attachmentCheckbox').addEventListener('change', (e) => {
+      document.getElementById('attachmentBox').style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    function showDocuments(moldId) {
+      const modal = document.getElementById('docModal');
+      const title = document.getElementById('docTitle');
+      const content = document.getElementById('docContent');
+      
+      const docData = {
+        'SC25-01': {
+          title: 'SC25-01 - 设计文档',
+          content: `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+              <h4>📁 附件列表（3个文件）</h4>
+              <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <tr style="background: #ecf0f1;">
+                  <th style="padding: 10px; text-align: left;">文件名</th>
+                  <th style="padding: 10px; text-align: left;">大小</th>
+                  <th style="padding: 10px; text-align: left;">上传时间</th>
+                  <th style="padding: 10px; text-align: left;">操作</th>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                  <td style="padding: 10px;">📄 SC25-01_设计图纸.dwg</td>
+                  <td style="padding: 10px;">2.4 MB</td>
+                  <td style="padding: 10px;">2025-10-26 10:15</td>
+                  <td style="padding: 10px;"><button class="btn" style="padding: 4px 8px; font-size: 12px;">预览</button></td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                  <td style="padding: 10px;">📋 SC25-01_物料清单.xlsx</td>
+                  <td style="padding: 10px;">156 KB</td>
+                  <td style="padding: 10px;">2025-10-26 10:18</td>
+                  <td style="padding: 10px;"><button class="btn" style="padding: 4px 8px; font-size: 12px;">预览</button></td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                  <td style="padding: 10px;">📊 SC25-01_工时估算.pdf</td>
+                  <td style="padding: 10px;">325 KB</td>
+                  <td style="padding: 10px;">2025-10-26 10:20</td>
+                  <td style="padding: 10px;"><button class="btn" style="padding: 4px 8px; font-size: 12px;">预览</button></td>
+                </tr>
+              </table>
+              <div style="margin-top: 15px; background: #f5f9ff; padding: 10px; border-radius: 4px; border-left: 4px solid #3498db;">
+                <p style="font-size: 12px; margin: 0;"><strong>💡 提示：</strong>所有文件已通过病毒扫描，可安心使用。</p>
+              </div>
+            </div>
+          `
+        },
+        'SC25-02': {
+          title: 'SC25-02 - 物料清单',
+          content: `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+              <h4>📦 物料详细清单</h4>
+              <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <tr style="background: #ecf0f1;">
+                  <th style="padding: 10px; text-align: left;">物料名称</th>
+                  <th style="padding: 10px; text-align: left;">规格</th>
+                  <th style="padding: 10px; text-align: left;">数量</th>
+                  <th style="padding: 10px; text-align: left;">单价</th>
+                  <th style="padding: 10px; text-align: left;">小计</th>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                  <td style="padding: 10px;">优质钢料</td>
+                  <td style="padding: 10px;">SKD11</td>
+                  <td style="padding: 10px;">120kg</td>
+                  <td style="padding: 10px;">¥65/kg</td>
+                  <td style="padding: 10px;">¥7,800</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                  <td style="padding: 10px;">红铜板</td>
+                  <td style="padding: 10px;">2mm</td>
+                  <td style="padding: 10px;">8片</td>
+                  <td style="padding: 10px;">¥85/片</td>
+                  <td style="padding: 10px;">¥680</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                  <td style="padding: 10px; background: #fef5f5;"><strong>合计</strong></td>
+                  <td colspan="3" style="padding: 10px; background: #fef5f5;"></td>
+                  <td style="padding: 10px; background: #fef5f5;"><strong>¥18,500</strong></td>
+                </tr>
+              </table>
+            </div>
+          `
+        },
+        'SC25-03': {
+          title: 'SC25-03 - 检验规范',
+          content: `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+              <h4>🔍 产品质检规范</h4>
+              <div style="margin-top: 10px;">
+                <h5>检验项目：</h5>
+                <ul>
+                  <li>✓ 外观检查：无毛刺、无锈迹、无划痕</li>
+                  <li>✓ 尺寸精度：±0.05mm（关键尺寸）</li>
+                  <li>✓ 脱模测试：能顺利脱模5000次</li>
+                  <li>✓ 耐热测试：连续工作8小时不变形</li>
+                  <li>✓ 冷却系统：各通道通畅无堵塞</li>
+                </ul>
+              </div>
+              <div style="margin-top: 10px; background: #e6f7ff; padding: 10px; border-radius: 4px;">
+                <p style="margin: 0; font-size: 12px;"><strong>合格标准：</strong>5项全部通过方为合格</p>
+              </div>
+            </div>
+          `
+        }
+      };
+      
+      const data = docData[moldId];
+      if (data) {
+        title.textContent = data.title;
+        content.innerHTML = data.content;
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closeDocModal() {
+      document.getElementById('docModal').style.display = 'none';
+    }
+
+    window.onclick = (e) => {
+      if (e.target.classList.contains('modal') && e.target.id === 'approvalModal') {
+        closeApprovalModal();
+      }
+      if (e.target.id === 'docModal') {
+        closeDocModal();
+      }
+    };
+  </script>
+</body>
+</html>

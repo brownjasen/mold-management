@@ -1,0 +1,30 @@
+{
+  "name": "moldmanagement",
+  "version": "1.0.0",
+  "description": "模具精益生产管理系统 - Lean Manufacturing Management System for Mold Production",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev",
+    "client": "cd client && python -m http.server 8000",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "seed": "cd server && node seed.js"
+  },
+  "keywords": [
+    "mold",
+    "manufacturing",
+    "production",
+    "management",
+    "lean",
+    "inventory"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>模具生产详情 - 模具精益生产管理系统</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .mold-detail {
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 20px;
+    }
+
+    .header h1 {
+      flex: 1;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .btn-back {
+      padding: 8px 16px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .module-section {
+      margin-bottom: 30px;
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #2196F3;
+    }
+
+    .module-title {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    .stages-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .stage-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .stage-card.pending {
+      border-color: #f44336;
+      background: #ffebee;
+    }
+
+    .stage-card.in_progress {
+      border-color: #ff9800;
+      background: #fff3e0;
+    }
+
+    .stage-card.completed {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+    }
+
+    .stage-name {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .stage-percentage {
+      font-size: 18px;
+      color: #2196F3;
+      margin-bottom: 10px;
+    }
+
+    .stage-actions {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .btn-yellow {
+      background: #ffb74d;
+      color: white;
+    }
+
+    .btn-green {
+      background: #66bb6a;
+      color: white;
+    }
+
+    .stage-status {
+      font-size: 12px;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      color: white;
+    }
+
+    .status-red {
+      background: #f44336;
+    }
+
+    .status-yellow {
+      background: #ff9800;
+    }
+
+    .status-green {
+      background: #4CAF50;
+    }
+  </style>
+</head>
+<body>
+  <div class="mold-detail">
+    <div class="header">
+      <button class="btn-back" onclick="history.back()">← 返回列表</button>
+      <h1 id="moldTitle">模具生产详情</h1>
+    </div>
+
+    <div id="modulesContainer"></div>
+  </div>
+
+  <script>
+    const moldId = new URLSearchParams(window.location.search).get('id');
+    
+    const getStatusClass = (status) => {
+      const classMap = {
+        'pending': 'status-red',
+        'in_progress': 'status-yellow',
+        'completed': 'status-green'
+      };
+      return classMap[status] || '';
+    };
+
+    const getStatusLabel = (status) => {
+      const labels = {
+        'pending': '未开始',
+        'in_progress': '进行中',
+        'completed': '已完成'
+      };
+      return labels[status] || status;
+    };
+
+    const formatTime = (time) => {
+      if (!time) return '';
+      return new Date(time).toLocaleString('zh-CN');
+    };
+
+    const loadMoldDetail = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/molds/detail/${moldId}`);
+        const data = await res.json();
+        const mold = data.data;
+
+        document.getElementById('moldTitle').textContent = `${mold.moldNumber} 生产详情`;
+
+        const container = document.getElementById('modulesContainer');
+        const modules = ['moldFrame', 'threeParts', 'accessories', 'assembly', 'trialMold', 'repair'];
+        const titles = ['模架', '三大件', '辅料', '组装', '试模', '返修'];
+
+        container.innerHTML = modules.map((moduleKey, idx) => {
+          const module = mold.modules[moduleKey];
+          if (!module.stages) return '';
+
+          return `
+            <div class="module-section">
+              <h2 class="module-title">${titles[idx]}</h2>
+              <div class="stages-container">
+                ${module.stages.map((stage, stageIdx) => `
+                  <div class="stage-card ${stage.status}">
+                    <div class="stage-name">${stage.name}</div>
+                    <div class="stage-percentage">${stage.percentage}%</div>
+                    <div class="stage-status ${getStatusClass(stage.status)}">
+                      ${getStatusLabel(stage.status)}
+                    </div>
+                    <div style="font-size: 11px; margin-top: 8px; color: #666;">
+                      ${formatTime(stage.startTime) || '未开始'}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load mold detail:', err);
+      }
+    };
+
+    loadMoldDetail();
+    setInterval(loadMoldDetail, 5000);
+  </script>
+</body>
+</html>

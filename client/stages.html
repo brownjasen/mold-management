@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工序管理</title>
+  <link rel="icon" href="favicon.ico">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header h1 { color: #2c3e50; margin-bottom: 10px; }
+    .breadcrumb { color: #7f8c8d; font-size: 14px; }
+    .breadcrumb a { color: #3498db; text-decoration: none; cursor: pointer; }
+    .module-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      background: white;
+      border: 2px solid #ecf0f1;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    .tab-btn.active {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+    .tab-btn:hover {
+      border-color: #3498db;
+    }
+    .stage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .stage-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.3s;
+      border-left: 4px solid #ecf0f1;
+    }
+    .stage-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .stage-card.pending {
+      border-left-color: #e74c3c;
+    }
+    .stage-card.in_progress {
+      border-left-color: #f39c12;
+    }
+    .stage-card.completed {
+      border-left-color: #27ae60;
+    }
+    .stage-name { font-weight: bold; margin-bottom: 10px; color: #2c3e50; }
+    .stage-percentage {
+      font-size: 24px;
+      font-weight: bold;
+      color: #3498db;
+      margin: 10px 0;
+    }
+    .stage-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .status-pending { background: #ffe6e6; color: #c62828; }
+    .status-in_progress { background: #fff3e0; color: #e65100; }
+    .status-completed { background: #e6ffe6; color: #2e7d32; }
+    .btn {
+      padding: 8px 16px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-right: 5px;
+      margin-top: 10px;
+    }
+    .btn:hover { background: #2980b9; }
+    .btn-success { background: #27ae60; }
+    .btn-success:hover { background: #229954; }
+    .btn-warning { background: #e74c3c; }
+    .btn-warning:hover { background: #c0392b; }
+    .info-box {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    .info-label { font-weight: bold; color: #2c3e50; }
+    .info-value { color: #7f8c8d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>工序管理</h1>
+      <div class="breadcrumb">
+        <a onclick="history.back()">← 返回</a> / 模具详情 / 工序管理
+      </div>
+    </div>
+
+    <!-- 模具基本信息 -->
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">模具编号：</span>
+        <span class="info-value">SC25-01</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">下单时间：</span>
+        <span class="info-value">2025-10-20 08:00</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">总体进度：</span>
+        <span class="info-value"><strong>35.5%</strong></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">状态：</span>
+        <span class="info-value"><span style="background: #fff3e0; padding: 4px 8px; border-radius: 4px;">⏳ 生产中</span></span>
+      </div>
+    </div>
+
+    <!-- 模块选择 -->
+    <div class="module-tabs">
+      <button class="tab-btn active" onclick="switchModule('moldFrame')">🏗️ 模架</button>
+      <button class="tab-btn" onclick="switchModule('threeParts')">⚙️ 三大件</button>
+      <button class="tab-btn" onclick="switchModule('accessory')">📦 辅料</button>
+      <button class="tab-btn" onclick="switchModule('assembly')">🔧 组装</button>
+      <button class="tab-btn" onclick="switchModule('trial')">🧪 试模</button>
+      <button class="tab-btn" onclick="switchModule('repair')">🔄 返修</button>
+    </div>
+
+    <!-- 模架工序 -->
+    <div id="moldFrame" class="module" style="display: block;">
+      <h2>🏗️ 模架工序 (10道)</h2>
+      <div class="stage-grid">
+        <div class="stage-card in_progress">
+          <div class="stage-name">01. 设计图纸</div>
+          <div class="stage-percentage">2%</div>
+          <span class="stage-status status-in_progress">进行中</span>
+          <div style="font-size: 12px; color: #7f8c8d;">
+            <p>开始: 2025-10-20 08:30</p>
+            <p>预计: 1天</p>
+          </div>
+          <button class="btn btn-success">完成</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">02. 模料</div>
+          <div class="stage-percentage">7%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <div style="font-size: 12px; color: #7f8c8d;">
+            <p>预计: 3天</p>
+          </div>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">03. 深孔钻</div>
+          <div class="stage-percentage">3%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">04. 数控铣</div>
+          <div class="stage-percentage">6%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">05. 卧加</div>
+          <div class="stage-percentage">2%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">06. 加工中心</div>
+          <div class="stage-percentage">4%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">07. 倒角磨床</div>
+          <div class="stage-percentage">4%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">08. 真空淬火</div>
+          <div class="stage-percentage">2%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">09. 清洁</div>
+          <div class="stage-percentage">1%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">10. 质检</div>
+          <div class="stage-percentage">0.5%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 三大件工序 -->
+    <div id="threeParts" class="module" style="display: none;">
+      <h2>⚙️ 三大件工序 (8道)</h2>
+      <div class="stage-grid">
+        <div class="stage-card completed">
+          <div class="stage-name">01. 设计图纸</div>
+          <div class="stage-percentage">0.2%</div>
+          <span class="stage-status status-completed">已完成</span>
+          <div style="font-size: 12px; color: #7f8c8d;">
+            <p>开始: 2025-10-20 09:00</p>
+            <p>完成: 2025-10-20 10:30</p>
+          </div>
+        </div>
+
+        <div class="stage-card in_progress">
+          <div class="stage-name">02. 模料</div>
+          <div class="stage-percentage">5%</div>
+          <span class="stage-status status-in_progress">进行中</span>
+          <button class="btn btn-success">完成</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">03. 开粗</div>
+          <div class="stage-percentage">10%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">04. 真空淬火</div>
+          <div class="stage-percentage">20%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">05. 精加工</div>
+          <div class="stage-percentage">20%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">06. 抛光</div>
+          <div class="stage-percentage">3%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">07. 清洁</div>
+          <div class="stage-percentage">1%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+
+        <div class="stage-card pending">
+          <div class="stage-name">08. 质检</div>
+          <div class="stage-percentage">1.2%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 其他模块的占位符 -->
+    <div id="accessory" class="module" style="display: none;">
+      <h2>📦 辅料库存</h2>
+      <table style="width: 100%; background: white; border-collapse: collapse;">
+        <thead style="background: #ecf0f1;">
+          <tr>
+            <th style="padding: 10px; text-align: left;">品名</th>
+            <th style="padding: 10px; text-align: left;">规格</th>
+            <th style="padding: 10px; text-align: left;">数量</th>
+            <th style="padding: 10px; text-align: left;">状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid #ecf0f1;">
+            <td style="padding: 10px;">铜板</td>
+            <td style="padding: 10px;">SC-A100</td>
+            <td style="padding: 10px;">12件</td>
+            <td style="padding: 10px;"><span style="background: #e6ffe6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">✅ 齐备</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid #ecf0f1;">
+            <td style="padding: 10px;">铜导套</td>
+            <td style="padding: 10px;">SC-B100</td>
+            <td style="padding: 10px;">8件</td>
+            <td style="padding: 10px;"><span style="background: #e6ffe6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">✅ 齐备</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="assembly" class="module" style="display: none;">
+      <h2>🔧 组装工序</h2>
+      <div class="stage-grid">
+        <div class="stage-card pending">
+          <div class="stage-name">组装</div>
+          <div class="stage-percentage">1%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="trial" class="module" style="display: none;">
+      <h2>🧪 试模工序</h2>
+      <div class="stage-grid">
+        <div class="stage-card pending">
+          <div class="stage-name">初试</div>
+          <div class="stage-percentage">0.3%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+        <div class="stage-card pending">
+          <div class="stage-name">加克重抛光</div>
+          <div class="stage-percentage">1%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+        <div class="stage-card pending">
+          <div class="stage-name">试样品</div>
+          <div class="stage-percentage">0.3%</div>
+          <span class="stage-status status-pending">未开始</span>
+          <button class="btn">开始</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="repair" class="module" style="display: none;">
+      <h2>🔄 返修管理</h2>
+      <button class="btn btn-warning">+ 申请返修</button>
+      <table style="width: 100%; background: white; border-collapse: collapse; margin-top: 20px;">
+        <thead style="background: #ecf0f1;">
+          <tr>
+            <th style="padding: 10px; text-align: left;">工件</th>
+            <th style="padding: 10px; text-align: left;">原因</th>
+            <th style="padding: 10px; text-align: left;">责任人</th>
+            <th style="padding: 10px; text-align: left;">状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid #ecf0f1;">
+            <td colspan="4" style="padding: 20px; text-align: center; color: #7f8c8d;">暂无返修项</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function switchModule(moduleName) {
+      // 隐藏所有模块
+      document.querySelectorAll('.module').forEach(m => m.style.display = 'none');
+      // 显示选中模块
+      document.getElementById(moduleName).style.display = 'block';
+      // 更新按钮样式
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

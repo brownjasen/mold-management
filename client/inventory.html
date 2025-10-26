@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>库存管理系统</title>
+  <link rel="icon" href="favicon.ico">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header h1 { color: #2c3e50; margin-bottom: 10px; }
+    .breadcrumb { color: #7f8c8d; font-size: 14px; }
+    .breadcrumb a { color: #3498db; text-decoration: none; cursor: pointer; }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    .btn:hover { background: #2980b9; }
+    .btn-primary { background: #27ae60; }
+    .btn-primary:hover { background: #229954; }
+    .btn-warning { background: #e74c3c; }
+    .btn-warning:hover { background: #c0392b; }
+    .search-box {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ecf0f1;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .stat-card h3 { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; }
+    .stat-card .number { font-size: 32px; font-weight: bold; color: #3498db; }
+    table {
+      width: 100%;
+      background: white;
+      border-collapse: collapse;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    thead {
+      background: #ecf0f1;
+    }
+    tbody tr:hover {
+      background: #f8f9fa;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-ok { background: #e6ffe6; color: #2e7d32; }
+    .status-warning { background: #fff3e0; color: #e65100; }
+    .status-alert { background: #ffcccc; color: #c62828; }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      min-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .modal-content h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ecf0f1;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-buttons button {
+      flex: 1;
+      padding: 10px;
+    }
+    .btn-cancel {
+      background: #95a5a6;
+    }
+    .btn-cancel:hover {
+      background: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📦 库存管理系统</h1>
+      <div class="breadcrumb">
+        <a onclick="history.back()">← 返回</a> / 库存管理
+      </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats">
+      <div class="stat-card">
+        <h3>总库存金额</h3>
+        <div class="number">¥2,450,000</div>
+      </div>
+      <div class="stat-card">
+        <h3>品种总数</h3>
+        <div class="number">48</div>
+      </div>
+      <div class="stat-card">
+        <h3>预警品项</h3>
+        <div class="number" style="color: #e74c3c;">5</div>
+      </div>
+      <div class="stat-card">
+        <h3>本月出库</h3>
+        <div class="number">12,000 件</div>
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="controls">
+      <button class="btn btn-primary" onclick="openModal('inbound')">📥 入库</button>
+      <button class="btn" onclick="openModal('outbound')">📤 出库</button>
+      <button class="btn" onclick="openModal('transfer')">🔄 调拨</button>
+      <button class="btn" onclick="openModal('check')">✔️ 盘点</button>
+      <button class="btn-warning" onclick="exportData()">📊 导出</button>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="search-box">
+      <input type="text" id="search" placeholder="搜索品名、规格...">
+      <button class="btn">🔍 搜索</button>
+    </div>
+
+    <!-- 库存表格 -->
+    <table>
+      <thead>
+        <tr>
+          <th>序号</th>
+          <th>品名</th>
+          <th>规格型号</th>
+          <th>现有库存</th>
+          <th>安全库存</th>
+          <th>单价</th>
+          <th>库存金额</th>
+          <th>状态</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>阀针</td>
+          <td>SC-2020A</td>
+          <td>150</td>
+          <td>200</td>
+          <td>¥500</td>
+          <td>¥75,000</td>
+          <td><span class="status-badge status-warning">⚠️ 预警</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px;">补货</button>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">详情</button>
+          </td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>导柱</td>
+          <td>SC-2021A</td>
+          <td>300</td>
+          <td>200</td>
+          <td>¥800</td>
+          <td>¥240,000</td>
+          <td><span class="status-badge status-ok">✅ 正常</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px;">详情</button>
+          </td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>导套</td>
+          <td>SC-2022A</td>
+          <td>200</td>
+          <td>200</td>
+          <td>¥600</td>
+          <td>¥120,000</td>
+          <td><span class="status-badge status-ok">✅ 正常</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px;">详情</button>
+          </td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>变径弯头</td>
+          <td>SC-2020B</td>
+          <td>50</td>
+          <td>200</td>
+          <td>¥1200</td>
+          <td>¥60,000</td>
+          <td><span class="status-badge status-alert">🔴 严重预警</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px; background: #e74c3c;">加急补货</button>
+          </td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>铜板</td>
+          <td>CU-001</td>
+          <td>250</td>
+          <td>200</td>
+          <td>¥2500</td>
+          <td>¥625,000</td>
+          <td><span class="status-badge status-ok">✅ 正常</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px;">详情</button>
+          </td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>活塞</td>
+          <td>PST-001</td>
+          <td>180</td>
+          <td>200</td>
+          <td>¥400</td>
+          <td>¥72,000</td>
+          <td><span class="status-badge status-warning">⚠️ 预警</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px;">补货</button>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">详情</button>
+          </td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>热电偶</td>
+          <td>TE-001</td>
+          <td>320</td>
+          <td>200</td>
+          <td>¥150</td>
+          <td>¥48,000</td>
+          <td><span class="status-badge status-ok">✅ 正常</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px;">详情</button>
+          </td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>密封圈</td>
+          <td>SR-001</td>
+          <td>1200</td>
+          <td>500</td>
+          <td>¥50</td>
+          <td>¥60,000</td>
+          <td><span class="status-badge status-ok">✅ 正常</span></td>
+          <td>
+            <button class="btn" style="padding: 4px 8px; font-size: 12px;">详情</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 入库模态框 -->
+  <div id="inboundModal" class="modal">
+    <div class="modal-content">
+      <h2>📥 入库</h2>
+      <div class="form-group">
+        <label>品名</label>
+        <select>
+          <option>阀针</option>
+          <option>导柱</option>
+          <option>导套</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>入库数量</label>
+        <input type="number" placeholder="请输入数量" min="1">
+      </div>
+      <div class="form-group">
+        <label>单价</label>
+        <input type="number" placeholder="请输入单价" min="0">
+      </div>
+      <div class="form-group">
+        <label>备注</label>
+        <textarea placeholder="备注信息" rows="3"></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" onclick="closeModal('inbound')">✔️ 确认入库</button>
+        <button class="btn btn-cancel" onclick="closeModal('inbound')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 出库模态框 -->
+  <div id="outboundModal" class="modal">
+    <div class="modal-content">
+      <h2>📤 出库</h2>
+      <div class="form-group">
+        <label>品名</label>
+        <select>
+          <option>阀针</option>
+          <option>导柱</option>
+          <option>导套</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>出库数量</label>
+        <input type="number" placeholder="请输入数量" min="1">
+      </div>
+      <div class="form-group">
+        <label>用途</label>
+        <input type="text" placeholder="如：模具SC25-01">
+      </div>
+      <div class="form-group">
+        <label>领用人</label>
+        <input type="text" placeholder="请输入领用人">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" onclick="closeModal('outbound')">✔️ 确认出库</button>
+        <button class="btn btn-cancel" onclick="closeModal('outbound')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 调拨模态框 -->
+  <div id="transferModal" class="modal">
+    <div class="modal-content">
+      <h2>🔄 库位调拨</h2>
+      <div class="form-group">
+        <label>品名</label>
+        <select><option>阀针</option></select>
+      </div>
+      <div class="form-group">
+        <label>调拨数量</label>
+        <input type="number" placeholder="请输入数量" min="1">
+      </div>
+      <div class="form-group">
+        <label>调入库位</label>
+        <select>
+          <option>库位A1</option>
+          <option>库位A2</option>
+          <option>库位B1</option>
+        </select>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" onclick="closeModal('transfer')">✔️ 确认调拨</button>
+        <button class="btn btn-cancel" onclick="closeModal('transfer')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 盘点模态框 -->
+  <div id="checkModal" class="modal">
+    <div class="modal-content">
+      <h2>✔️ 库存盘点</h2>
+      <div class="form-group">
+        <label>品名</label>
+        <select><option>阿针</option></select>
+      </div>
+      <div class="form-group">
+        <label>系统库存</label>
+        <input type="number" value="150" disabled style="background: #ecf0f1;">
+      </div>
+      <div class="form-group">
+        <label>实际库存</label>
+        <input type="number" placeholder="请输入实际数量">
+      </div>
+      <div class="form-group">
+        <label>差异原因</label>
+        <textarea placeholder="请填写差异原因" rows="3"></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" onclick="closeModal('check')">✔️ 确认盘点</button>
+        <button class="btn btn-cancel" onclick="closeModal('check')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openModal(type) {
+      const modalId = type + 'Modal';
+      document.getElementById(modalId).classList.add('show');
+    }
+
+    function closeModal(type) {
+      const modalId = type + 'Modal';
+      document.getElementById(modalId).classList.remove('show');
+    }
+
+    function exportData() {
+      alert('导出库存数据到 Excel');
+    }
+
+    // 点击空白处关闭模态框
+    window.onclick = (e) => {
+      if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('show');
+      }
+    };
+  </script>
+</body>
+</html>
